@@ -20,6 +20,11 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
+        .logo {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
         .loading { 
             color: #007bff; 
         }
@@ -30,14 +35,7 @@
             border-radius: 8px; 
             padding: 30px; 
             color: #155724; 
-        }
-        
-        .error { 
-            background: #f8d7da; 
-            border: 1px solid #f5c6cb; 
-            border-radius: 8px; 
-            padding: 30px; 
-            color: #721c24; 
+            margin: 20px 0;
         }
         
         .spinner { 
@@ -68,18 +66,12 @@
             font-size: 16px;
         }
         
-        .logo {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        
-        a:hover {
-            text-decoration: underline;
+        .instructions {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -104,88 +96,64 @@
                 const email = params.get('email');
                 const userId = params.get('userId');
 
-                console.log('🔍 DEBUGGING - Current URL:', window.location.href);
-                console.log('🔍 DEBUGGING - URL Search:', window.location.search);
-                console.log('📧 Verification parameters:', { 
-                    token: token ? token.substring(0, 20) + '...' : 'MISSING', 
-                    email: email || 'MISSING', 
-                    userId: userId || 'MISSING' 
-                });
-
                 if (!token || !email || !userId) {
-                    console.error('❌ Missing parameters:', { token: !!token, email: !!email, userId: !!userId });
-                    throw new Error('Invalid verification link. Missing required parameters. Please check your email and try again.');
+                    throw new Error('Invalid verification link. Please check your email and try again.');
                 }
 
-                console.log('✅ All parameters present, making API call...');
-
-                // Call Supabase Edge Function with proper auth
-                const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwemllcWZienJ6aXVoamxuemJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NTMwODMsImV4cCI6MjA3MTQyOTA4M30.CAYTI3JjG_JkHnGAHhf8qzmJuE06M15YwwnW6__ZTWY';
-                
-                const response = await fetch('https://dpzieqfbzrziuhjlnzbb.supabase.co/functions/v1/verify-email-token', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${supabaseAnonKey}`,
-                        'Content-Type': 'application/json',
-                        'apikey': supabaseAnonKey
-                    },
-                    body: JSON.stringify({ token, email, userId })
+                // Call Supabase Edge Function directly (no auth needed for GET)
+                const response = await fetch(`https://dpzieqfbzrziuhjlnzbb.supabase.co/functions/v1/verify-email-token?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`, {
+                    method: 'GET'
                 });
 
-                console.log('📡 Supabase response status:', response.status);
-                console.log('📡 Supabase response headers:', Object.fromEntries(response.headers.entries()));
-                
-                let result;
-                try {
-                    result = await response.json();
-                    console.log('📡 Supabase response data:', result);
-                } catch (jsonError) {
-                    console.error('❌ Failed to parse JSON response:', jsonError);
-                    const textResponse = await response.text();
-                    console.log('📡 Raw response text:', textResponse);
-                    throw new Error(`Failed to parse API response: ${textResponse}`);
-                }
-
-                if (response.ok && result.success) {
-                    // Success
+                if (response.ok) {
+                    // Success - show confirmation page
                     document.getElementById('status').innerHTML = `
                         <div class="success">
                             <h2>✅ Email Verified Successfully!</h2>
                             <p><strong>Welcome to Loqal!</strong></p>
-                            <p>Your account has been verified and you now have access to all premium features.</p>
-                            
-                            <div class="feature-list">
-                                <h3>🌟 What's Unlocked:</h3>
-                                <ul>
-                                    <li>📝 Write reviews and ratings</li>
-                                    <li>📚 Create personal collections</li>
-                                    <li>🤝 Social interactions with other users</li>
-                                    <li>🎯 Premium recommendations</li>
-                                    <li>⭐ Advanced search features</li>
-                                </ul>
-                            </div>
-                            
-                            <div style="margin-top: 30px; padding: 20px; background: #e8f4fd; border-radius: 8px; border-left: 4px solid #007bff;">
-                                <p><strong>📱 Next Steps:</strong></p>
-                                <p>Return to the Loqal app and enjoy your verified account!</p>
-                                <p style="font-size: 14px; color: #666; margin-top: 15px;">You can now close this browser tab.</p>
-                            </div>
+                            <p>Your email address has been verified and your account is now active.</p>
                         </div>
+                        
+                        <div class="instructions">
+                            <h3>📱 Next Steps:</h3>
+                            <ol style="text-align: left;">
+                                <li><strong>Open the Loqal app</strong> on your phone</li>
+                                <li><strong>Go to Profile</strong> and check your verification status</li>
+                                <li><strong>Enjoy full access</strong> to all premium features!</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="feature-list">
+                            <h3>🌟 What You've Unlocked:</h3>
+                            <ul>
+                                <li>📝 Write reviews and ratings</li>
+                                <li>📚 Create personal collections</li>
+                                <li>🤝 Social interactions with other users</li>
+                                <li>🎯 Premium recommendations</li>
+                                <li>⭐ Advanced search features</li>
+                            </ul>
+                        </div>
+                        
+                        <p style="font-size: 14px; color: #666; margin-top: 30px;">
+                            You can now close this browser tab and return to the Loqal app.
+                        </p>
                     `;
                 } else {
-                    throw new Error(result.error || 'Verification failed. Please try again.');
+                    // Handle different error cases
+                    let errorMessage = 'Verification failed. Please try again.';
+                    
+                    if (response.status === 400) {
+                        errorMessage = 'Invalid or expired verification link. Please request a new verification email.';
+                    } else if (response.status === 404) {
+                        errorMessage = 'Verification service not found. Please contact support.';
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
             } catch (error) {
-                console.error('❌ Verification error:', error);
-                console.error('❌ Error details:', {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack
-                });
-                
-                // Error
+                // Error handling
                 document.getElementById('status').innerHTML = `
-                    <div class="error">
+                    <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 30px; color: #721c24;">
                         <h2>❌ Verification Error</h2>
                         <p><strong>Unable to verify your email:</strong></p>
                         <p>${error.message}</p>
@@ -196,6 +164,7 @@
                                 <li>Make sure you're using the latest verification email</li>
                                 <li>Check if the link has expired (valid for 24 hours)</li>
                                 <li>Try requesting a new verification email in the app</li>
+                                <li>Open the Loqal app and refresh your verification status</li>
                             </ul>
                         </div>
                         
