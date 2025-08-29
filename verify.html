@@ -104,26 +104,47 @@
                 const email = params.get('email');
                 const userId = params.get('userId');
 
-                console.log('📧 Verification parameters:', { token: token?.substring(0, 10) + '...', email, userId });
+                console.log('🔍 DEBUGGING - Current URL:', window.location.href);
+                console.log('🔍 DEBUGGING - URL Search:', window.location.search);
+                console.log('📧 Verification parameters:', { 
+                    token: token ? token.substring(0, 20) + '...' : 'MISSING', 
+                    email: email || 'MISSING', 
+                    userId: userId || 'MISSING' 
+                });
 
                 if (!token || !email || !userId) {
-                    throw new Error('Invalid verification link. Please check your email and try again.');
+                    console.error('❌ Missing parameters:', { token: !!token, email: !!email, userId: !!userId });
+                    throw new Error('Invalid verification link. Missing required parameters. Please check your email and try again.');
                 }
 
+                console.log('✅ All parameters present, making API call...');
+
                 // Call Supabase Edge Function with proper auth
+                const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwemllcWZienJ6aXVoamxuemJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NTMwODMsImV4cCI6MjA3MTQyOTA4M30.CAYTI3JjG_JkHnGAHhf8qzmJuE06M15YwwnW6__ZTWY';
+                
                 const response = await fetch('https://dpzieqfbzrziuhjlnzbb.supabase.co/functions/v1/verify-email-token', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwemllcWZienJ6aXVoamxuemJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NTMwODMsImV4cCI6MjA3MTQyOTA4M30.CAYTI3JjG_JkHnGAHhf8qzmJuE06M15YwwnW6__ZTWY`,
+                        'Authorization': `Bearer ${supabaseAnonKey}`,
                         'Content-Type': 'application/json',
-                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwemllcWZienJ6aXVoamxuemJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NTMwODMsImV4cCI6MjA3MTQyOTA4M30.CAYTI3JjG_JkHnGAHhf8qzmJuE06M15YwwnW6__ZTWY`
+                        'apikey': supabaseAnonKey
                     },
                     body: JSON.stringify({ token, email, userId })
                 });
 
                 console.log('📡 Supabase response status:', response.status);
-                const result = await response.json();
-                console.log('📡 Supabase response data:', result);
+                console.log('📡 Supabase response headers:', Object.fromEntries(response.headers.entries()));
+                
+                let result;
+                try {
+                    result = await response.json();
+                    console.log('📡 Supabase response data:', result);
+                } catch (jsonError) {
+                    console.error('❌ Failed to parse JSON response:', jsonError);
+                    const textResponse = await response.text();
+                    console.log('📡 Raw response text:', textResponse);
+                    throw new Error(`Failed to parse API response: ${textResponse}`);
+                }
 
                 if (response.ok && result.success) {
                     // Success
@@ -156,6 +177,11 @@
                 }
             } catch (error) {
                 console.error('❌ Verification error:', error);
+                console.error('❌ Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
                 
                 // Error
                 document.getElementById('status').innerHTML = `
